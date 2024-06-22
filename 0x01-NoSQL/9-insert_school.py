@@ -2,11 +2,12 @@
 from pymongo import MongoClient
 
 """
-Insert docs in Python
+ We are going to Insert docs in Python
 """
 
 
 def insert_school(mongo_collection, **kwargs):
+
     """
      inserts new document in
       collection on kwargs
