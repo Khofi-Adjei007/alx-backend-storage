@@ -1,54 +1,48 @@
 #!/usr/bin/env python3
 
-"""
-Module: log_stats
-
-This module connects to a MongoDB database
-and retrieves statistics from the
-logs collection of an Nginx server. It counts
-and prints the total number of
-logs and the number of logs for each HTTP method
-(GET, POST, PUT, PATCH, DELETE).
-Additionally, it counts and prints the number of
-status check logs (GET requests to /status).
-"""
-
+'''Task 15: Log stats module.
+'''
 from pymongo import MongoClient
 
-def log_stats():
-    """
-    Retrieve and print log statistics from the
-    logs collection in MongoDB.
 
-    This function connects to the MongoDB server
-    running on localhost, accesses
-    the logs.nginx collection, and counts the total
-    number of log entries as
-    well as the number of log entries for each HTTP
-    method. It also counts the
-    number of status check logs (GET requests to
-    /status) and prints all these
-    statistics.
-    """
+def print_nginx_request_logs(nginx_collection):
+
+    '''Print Nginx log stats.
+    '''
+    print('{} logs'.format(nginx_collection.count_documents({})))
+    print('Methods:')
+    methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+    for method in methods:
+        count = nginx_collection.count_documents({'method': method})
+        print('\tmethod {}: {}'.format(method, count))
+    status_count = nginx_collection.count_documents(
+            {'method': 'GET', 'path': '/status'}
+            )
+    print('{} status check'.format(status_count))
+
+
+def print_top_ips(server_collection):
+
+    '''Print top 10 IPs.
+    '''
+    print('IPs:')
+    request_logs = server_collection.aggregate([
+        {'$group': {'_id': "$ip", 'totalRequests': {'$sum': 1}}},
+        {'$sort': {'totalRequests': -1}},
+        {'$limit': 10},
+    ])
+    for log in request_logs:
+        print('\t{}: {}'.format(log['_id'], log['totalRequests']))
+
+
+def run():
+
+    '''Show Nginx log stats from MongoDB.
+    '''
     client = MongoClient('mongodb://127.0.0.1:27017')
-    logs_collection = client.logs.nginx
+    print_nginx_request_logs(client.logs.nginx)
+    print_top_ips(client.logs.nginx)
 
-    total = logs_collection.count_documents({})
-    get = logs_collection.count_documents({"method": "GET"})
-    post = logs_collection.count_documents({"method": "POST"})
-    put = logs_collection.count_documents({"method": "PUT"})
-    patch = logs_collection.count_documents({"method": "PATCH"})
-    delete = logs_collection.count_documents({"method": "DELETE"})
-    path = logs_collection.count_documents({"method": "GET", "path": "/status"})
 
-    print(f"{total} logs")
-    print("Methods:")
-    print(f"\tmethod GET: {get}")
-    print(f"\tmethod POST: {post}")
-    print(f"\tmethod PUT: {put}")
-    print(f"\tmethod PATCH: {patch}")
-    print(f"\tmethod DELETE: {delete}")
-    print(f"{path} status check")
-
-if __name__ == "__main__":
-    log_stats()
+if __name__ == '__main__':
+    run()
